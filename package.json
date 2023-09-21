@@ -1,0 +1,16 @@
+{
+  "name": "twitter-scraper",
+  "version": "1.0.0",
+  "description": "Scrapes twitter posts and returns links to all the images.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ."
+  },
+  "keywords": [],
+  "author": "KrammyGod",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "playwright": "^1.38.0"
+  }
+}
