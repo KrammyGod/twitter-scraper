@@ -41,8 +41,8 @@ exports.end = async () => {
 exports.getImageUrl = async (url) => {
     const page = await context.newPage();
     await page.goto(url);
-    // Wait for the main photo to load.
-    await page.waitForSelector('div[data-testid="tweetPhoto"]');
+    // Wait 5 seconds for the main photo to load.
+    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 5000 });
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
