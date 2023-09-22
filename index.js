@@ -42,3 +42,7 @@ function cleanup() {
 }
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
+// Sent by pm2
+process.on('message', message => {
+    if (message === 'shutdown') cleanup();
+});
