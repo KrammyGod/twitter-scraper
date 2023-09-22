@@ -20,11 +20,7 @@ http.createServer((req, res) => {
         ready.once('ready', resolve);
     }).then(() => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        Scraper.getImageUrl(url).then(imgs => {
-            res.end(JSON.stringify({ imgs }))
-        }).catch(() => {
-            res.end(JSON.stringify({ imgs: [url] }));
-        });
+        Scraper.getImageUrl(url).then(imgs => res.end(JSON.stringify({ imgs })));
     });
 }).listen(PORT, () => {
     console.log(`Scraper server listening on ${PORT}`);
@@ -33,9 +29,6 @@ http.createServer((req, res) => {
 // Ensure full cleanup on exit.
 function cleanup() {
     Scraper.end().then(() => {
-        console.log('Finished cleaning up server.');
-        process.exit(0);
-    }).catch(() => {
         console.log('Finished cleaning up server.');
         process.exit(0);
     });

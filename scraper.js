@@ -28,21 +28,26 @@ exports.start = async () => {
  * Must be called before closing server.
  * @returns {Promise<void>}
  */
-exports.end = async () => {
-    await context.close();
-    await browser.close();
+exports.end = () => {
+    return context.close().then(() => {
+        browser.close();
+    });
 };
 
 /**
  * Actual meat of this project.
+ * @param {import('playwright').Page} page
  * @param {string} url
  * @returns {Promise<string[]>}
  */
-exports.getImageUrl = async (url) => {
-    const page = await context.newPage();
+async function scrape(page, url) {
     await page.goto(url);
-    // Wait 5 seconds for the main photo to load.
-    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 5000 });
+    const route = page.url();
+    if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
+        return [url];
+    }
+    // Wait 3 seconds for the main photo to load.
+    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 3000 });
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
@@ -70,6 +75,22 @@ exports.getImageUrl = async (url) => {
         const res = await page.getByRole('img', { name: 'Image' }).first().getAttribute('src');
         urls.push(res);
     }
-    await page.close();
     return urls;
+}
+
+/**
+ * Wrapper that never throws.
+ * @param {string} url
+ * @returns {Promise<string[]>}
+ */
+exports.getImageUrl = async (url) => {
+    // This ensures we always close the page, regardless of errors.
+    const page = await context.newPage();
+    const urls = [url];
+    try {
+        urls.splice(0, 1, ...await scrape(page, url));
+    } finally {
+        await page.close();
+        return urls;
+    }
 }
