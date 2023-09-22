@@ -1,6 +1,7 @@
 require('dotenv/config');
 module.exports = {
   apps : [{
+    name: 'twitter-scraper',
     script: 'index.js',
     instances: 1,
     kill_timeout: 10_000, // Wait 10 seconds before force killing
