@@ -22,7 +22,7 @@ jobs:
           node-version: current
 
       - name: Install dependencies
-        run: npm i -g npm@latest pm2 dotenv
+        run: npm i -g npm@latest pm2 && npm i dotenv
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
