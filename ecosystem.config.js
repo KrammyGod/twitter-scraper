@@ -3,7 +3,7 @@ module.exports = {
   apps : [{
     name: 'twitter-scraper',
     script: 'index.js',
-    instances: 1,
+    instances: 'max',
     kill_timeout: 10_000, // Wait 10 seconds before force killing
     shutdown_with_message: true
   }],
