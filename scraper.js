@@ -46,12 +46,12 @@ async function scrape(page, url) {
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
         return [url];
     }
-    // Wait 3 seconds for the main photo to load.
-    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 3000 });
+    // Wait 2 seconds for the main photo to load.
+    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 2000 });
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
-    await tweetPhotos.first().click();
+    await tweetPhotos.first().click({ timeout: 2000 });
     // Keep scrolling through all the photos to load them all
     let nav = page.getByLabel('Next slide');
     // Wait for the navigation button to appear if there is one.
