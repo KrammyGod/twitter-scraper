@@ -46,8 +46,8 @@ async function scrape(page, url) {
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
         return [url];
     }
-    // Wait 2 seconds for the main photo to load.
-    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 2000 });
+    // Wait up to 5 seconds for the main photo to load.
+    await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 5000 });
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
@@ -89,6 +89,9 @@ exports.getImageUrl = async (url) => {
     const urls = [url];
     try {
         urls.splice(0, 1, ...await scrape(page, url));
+    } catch (e) {
+        // Log out the error instead of stderr to avoid pm2 spam.
+        console.log(e);
     } finally {
         await page.close();
         return urls;

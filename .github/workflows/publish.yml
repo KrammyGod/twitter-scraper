@@ -12,15 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Use current Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: current
+      - name: Checkout Source
+        uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: npm i -g npm@latest pm2 && npm i dotenv
+        run: npm i -g pm2 && npm i dotenv
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
