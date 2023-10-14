@@ -41,7 +41,8 @@ exports.end = () => {
  * @returns {Promise<string[]>}
  */
 async function scrape(page, url) {
-    await page.goto(url);
+    // Up to 5 seconds to load the page.
+    await page.goto(url, { timeout: 5000 });
     const route = page.url();
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
         return [url];

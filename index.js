@@ -11,6 +11,33 @@ Scraper.start().then(() => {
     ready.emit('ready');
 });
 
+// Create a running queue to handle requests sequentially.
+const queue = [];
+let running = false;
+function dequeue() {
+    if (queue.length === 0) {
+        running = false;
+        return;
+    }
+    const { promise, cb } = queue.shift();
+    running = true;
+    promise.then(res => {
+        cb(res);
+        dequeue();
+    });
+}
+/**
+ * Adds a function to the queue to be executed.
+ * @param {PromiseLike<T>} promise The asynchronous function to enqueue.
+ * @param {(arg: T) => any} cb The callback to call with the result of the function.
+ */
+function enqueue(promise, cb) {
+    queue.push({ promise, cb });
+    if (!running) {
+        dequeue();
+    }
+}
+
 http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
     if (!url) return res.writeHead(400).end('No data here yet...');
@@ -20,7 +47,7 @@ http.createServer((req, res) => {
         ready.once('ready', resolve);
     }).then(() => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        Scraper.getImageUrl(url).then(imgs => res.end(JSON.stringify({ imgs })));
+        enqueue(Scraper.getImageUrl(url), imgs => res.end(JSON.stringify({ imgs })));
     });
 }).listen(PORT, () => {
     console.log(`Scraper server listening on ${PORT}`);
