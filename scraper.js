@@ -45,7 +45,7 @@ async function scrape(page, url) {
     await page.goto(url, { timeout: 5000 });
     const route = page.url();
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
-        return [url];
+        return [];
     }
     // Wait up to 5 seconds for the main photo to load.
     await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 5000 });
@@ -87,9 +87,9 @@ async function scrape(page, url) {
 exports.getImageUrl = async (url) => {
     // This ensures we always close the page, regardless of errors.
     const page = await context.newPage();
-    const urls = [url];
+    const urls = [];
     try {
-        urls.splice(0, 1, ...await scrape(page, url));
+        urls.push(...await scrape(page, url));
     } catch (e) {
         // Log out the error instead of stderr to avoid pm2 spam.
         console.log(e);
