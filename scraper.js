@@ -47,6 +47,9 @@ async function scrape(page, url) {
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
         return [];
     }
+    // Taking screenshot allows debugging for that particular image and also makes the page
+    // loading a lot more stable (probably the time it takes to take the screenshot, even if unawaited?).
+    page.screenshot({ path: 'screenshot.png' });
     // Wait up to 5 seconds for the main photo to load.
     await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 5000 });
     // Check how many photos there are, and click on first one
