@@ -22,10 +22,10 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: 'none' # Required by the action
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
       
-      - name: Add to known hosts
-        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      - name: Hash known_hosts
+        run: ssh-keygen -Hf ~/.ssh/known_hosts
 
       # Omitting output for security reasons
       - name: Deploy to production
