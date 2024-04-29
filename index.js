@@ -41,13 +41,18 @@ function enqueue(promise, cb) {
 http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
     if (!url) return res.writeHead(400).end('No data here yet...');
+    console.log(`Received request for "${url}"`);
 
     new Promise(resolve => {
         if (started) return resolve();
         ready.once('ready', resolve);
     }).then(() => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        enqueue(Scraper.getImageUrl(url), imgs => res.end(JSON.stringify({ imgs })));
+        enqueue(Scraper.getImageUrl(url), imgs => {
+            result = JSON.stringify({ imgs });
+            console.log(`Completed request with result: ${result}`);
+            res.end(result);
+        });
     });
 }).listen(PORT, () => {
     console.log(`Scraper server listening on ${PORT}`);
