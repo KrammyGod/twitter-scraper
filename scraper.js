@@ -49,10 +49,10 @@ async function scrape(page, url) {
     }
     // Wait a bit for the page to finish loading (network delays)
     await page.waitForTimeout(1500);
-    // Taking screenshot allows debugging for that particular image
-    page.screenshot({ path: 'screenshot.png' });
     // Wait up to 10 seconds for the main photo to load.
     await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 10_000 });
+    // Taking screenshot allows debugging for that particular image
+    page.screenshot({ path: 'screenshot.png' });
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
