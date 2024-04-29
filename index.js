@@ -11,33 +11,6 @@ Scraper.start().then(() => {
     ready.emit('ready');
 });
 
-// Create a running queue to handle requests sequentially.
-const queue = [];
-let running = false;
-function dequeue() {
-    if (queue.length === 0) {
-        running = false;
-        return;
-    }
-    const { promise, cb } = queue.shift();
-    running = true;
-    promise.then(res => {
-        cb(res);
-        dequeue();
-    });
-}
-/**
- * Adds a function to the queue to be executed.
- * @param {PromiseLike<T>} promise The asynchronous function to enqueue.
- * @param {(arg: T) => any} cb The callback to call with the result of the function.
- */
-function enqueue(promise, cb) {
-    queue.push({ promise, cb });
-    if (!running) {
-        dequeue();
-    }
-}
-
 http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
     if (!url) return res.writeHead(400).end('No data here yet...');
@@ -47,11 +20,16 @@ http.createServer((req, res) => {
         if (started) return resolve();
         ready.once('ready', resolve);
     }).then(() => {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        enqueue(Scraper.getImageUrl(url), imgs => {
-            result = JSON.stringify({ imgs });
+        Scraper.getImageUrl(url).then(({ imgs, data }) => {
+            const result = JSON.stringify({ imgs });
             console.log(`Completed request with result: ${result}`);
-            res.end(result);
+            if (req.headers['user-agent'] === 'node') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(result);
+            }
+            // If not our node requesting it and assuming it is browser, send a debug screenshot.
+            res.writeHead(200, { 'Content-Type': 'image/png', imgs: JSON.stringify(imgs) });
+            res.end(data);
         });
     });
 }).listen(PORT, () => {

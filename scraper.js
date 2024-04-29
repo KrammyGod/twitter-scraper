@@ -38,7 +38,7 @@ exports.end = () => {
  * Actual meat of this project.
  * @param {import('playwright').Page} page
  * @param {string} url
- * @returns {Promise<string[]>}
+ * @returns {Promise<{ urls: string[], d: Buffer }>}
  */
 async function scrape(page, url) {
     // Up to 5 seconds to load the page.
@@ -52,7 +52,7 @@ async function scrape(page, url) {
     // Wait up to 10 seconds for the main photo to load.
     await page.waitForSelector('div[data-testid="tweetPhoto"]', { timeout: 10_000 });
     // Taking screenshot allows debugging for that particular image
-    page.screenshot({ path: 'screenshot.png' });
+    const d = await page.screenshot();
     // Check how many photos there are, and click on first one
     // The first cellInnerDiv is the original tweet, the rest are replies
     const tweetPhotos = page.getByTestId('cellInnerDiv').first().locator('a').filter({ has: page.getByTestId('tweetPhoto') });
@@ -80,25 +80,34 @@ async function scrape(page, url) {
         const res = await page.getByRole('img', { name: 'Image' }).first().getAttribute('src');
         urls.push(res);
     }
-    return urls;
+    return { urls, d };
 }
 
 /**
  * Wrapper that never throws.
  * @param {string} url
- * @returns {Promise<string[]>}
+ * @returns {Promise<{ imgs: string[], data: Buffer }>}
  */
 exports.getImageUrl = async (url) => {
     // This ensures we always close the page, regardless of errors.
     const page = await context.newPage();
-    const urls = [];
+    /**
+     * @type {string[]}
+     */
+    const imgs = [];
+    /**
+     * @type {Buffer}
+     */
+    let data = undefined;
     try {
-        urls.push(...await scrape(page, url));
+        let { urls, d } = await scrape(page, url);
+        imgs.push(...urls);
+        data = d;
     } catch (e) {
         // Log out the error instead of stderr to avoid pm2 spam.
         console.log(e);
     } finally {
         await page.close();
-        return urls;
+        return { imgs, data };
     }
 }
