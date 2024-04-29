@@ -17,7 +17,7 @@ module.exports = {
       'repo': 'git@github.com:KrammyGod/twitter-scraper.git',
       'path': process.env.DEPLOY_PATH,
       'pre-deploy': 'npm ci --omit dev',
-      'post-deploy': 'pm2 start --env production --update-env'
+      'post-deploy': 'pm2 start --env production'
     }
   }
 };
