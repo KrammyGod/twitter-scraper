@@ -48,7 +48,7 @@ async function scrape(page, url) {
         return [];
     }
     // Wait a bit for the page to finish loading (network delays)
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1500);
     // Taking screenshot allows debugging for that particular image
     page.screenshot({ path: 'screenshot.png' });
     // Wait up to 10 seconds for the main photo to load.
@@ -61,7 +61,7 @@ async function scrape(page, url) {
     let nav = page.getByLabel('Next slide');
     // Wait for the navigation button to appear if there is one.
     // Timeout after 2 seconds (single photo)
-    const canNav = await nav.waitFor({ timeout: 2000 }).then(() => true).catch(() => false);
+    const canNav = await nav.waitFor({ timeout: 1500 }).then(() => true).catch(() => false);
     const urls = [];
     if (canNav) {
         while (await nav.count()) {
