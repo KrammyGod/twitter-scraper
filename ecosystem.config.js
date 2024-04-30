@@ -6,7 +6,10 @@ module.exports = {
     time: true,
     exec_mode: 'fork',
     kill_timeout: 10_000, // Wait 10 seconds before force killing
-    shutdown_with_message: true
+    shutdown_with_message: true,
+    env_production: {
+      NODE_ENV: 'production'
+    }
   }],
 
   deploy: {

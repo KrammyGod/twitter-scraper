@@ -44,7 +44,7 @@ async function scrape(page, url) {
     await page.goto(url, { timeout: 5000 });
     const route = page.url();
     if (!route.startsWith('https://twitter.com') && !route.startsWith('https://x.com')) {
-        return [];
+        return { urls: [], d: Buffer.from([]) };
     }
     // Wait a bit for the page to finish loading (network delays)
     await page.waitForTimeout(1500);
