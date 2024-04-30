@@ -1,10 +1,10 @@
-require('dotenv/config');
 module.exports = {
   apps : [{
     name: 'twitter-scraper',
     script: 'index.js',
+    node_args: '--env-file=.env',
     time: true,
-    instances: 1,
+    exec_mode: 'fork',
     kill_timeout: 10_000, // Wait 10 seconds before force killing
     shutdown_with_message: true
   }],
@@ -16,7 +16,7 @@ module.exports = {
       'ref': 'origin/main',
       'repo': 'git@github.com:KrammyGod/twitter-scraper.git',
       'path': process.env.DEPLOY_PATH,
-      'pre-deploy': 'npm ci --omit dev',
+      'pre-deploy': 'npm ci --omit=dev',
       'post-deploy': 'pm2 start --env production'
     }
   }

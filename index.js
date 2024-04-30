@@ -1,4 +1,3 @@
-require('dotenv/config');
 const http = require('http');
 const Scraper = require('./scraper');
 const EventEmitter = require('events');
