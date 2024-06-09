@@ -1,5 +1,5 @@
 module.exports = {
-  apps : [{
+  apps: [{
     name: 'twitter-scraper',
     script: 'index.js',
     node_args: '--env-file=.env',
@@ -7,9 +7,6 @@ module.exports = {
     exec_mode: 'fork',
     kill_timeout: 10_000, // Wait 10 seconds before force killing
     shutdown_with_message: true,
-    env_production: {
-      NODE_ENV: 'production'
-    }
   }],
 
   deploy: {
@@ -19,8 +16,7 @@ module.exports = {
       'ref': 'origin/main',
       'repo': 'git@github.com:KrammyGod/twitter-scraper.git',
       'path': process.env.DEPLOY_PATH,
-      'pre-deploy': 'npm ci --omit=dev',
-      'post-deploy': 'pm2 start --env production'
-    }
-  }
+      'post-deploy': 'npm i --omit=dev && pm2 start --env production',
+    },
+  },
 };
