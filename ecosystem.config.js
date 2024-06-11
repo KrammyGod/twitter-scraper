@@ -16,7 +16,7 @@ module.exports = {
       'ref': 'origin/main',
       'repo': 'git@github.com:KrammyGod/twitter-scraper.git',
       'path': process.env.DEPLOY_PATH,
-      'post-deploy': 'npm i --omit=dev && pm2 start --env production',
+      'post-deploy': 'npm i --omit=dev && npm run playwrightSetup && pm2 start --env production',
     },
   },
 };

@@ -4,12 +4,13 @@
   "description": "Scrapes twitter posts and returns links to all the images.",
   "main": "index.js",
   "scripts": {
+    "playwrightSetup": "playwright install chromium",
     "start": "node --env-file=.env ."
   },
   "keywords": [],
   "author": "KrammyGod",
   "license": "ISC",
   "dependencies": {
-    "playwright": "^1.44.1"
+    "playwright-chromium": "^1.44.1"
   }
 }

@@ -1,11 +1,11 @@
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-chromium');
 
 /**
- * @type {import('playwright').Browser}
+ * @type {import('playwright-chromium').Browser}
  */
 let browser = undefined;
 /**
- * @type {import('playwright').BrowserContext}
+ * @type {import('playwright-chromium').BrowserContext}
  */
 let context = undefined;
 /**
