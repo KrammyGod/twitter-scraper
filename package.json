@@ -11,6 +11,6 @@
   "author": "KrammyGod",
   "license": "ISC",
   "dependencies": {
-    "playwright-chromium": "^1.46.1"
+    "playwright-chromium": "^1.47.1"
   }
 }
