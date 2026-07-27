@@ -1,16 +1,19 @@
 {
   "name": "twitter-scraper",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Scrapes twitter posts and returns links to all the images.",
   "main": "index.js",
+  "engines": {
+    "node": ">=22.9"
+  },
   "scripts": {
     "playwrightSetup": "playwright install chromium",
-    "start": "node --env-file=.env ."
+    "start": "node --env-file-if-exists=.env ."
   },
   "keywords": [],
   "author": "KrammyGod",
   "license": "ISC",
   "dependencies": {
-    "playwright-chromium": "^1.51.1"
+    "playwright-chromium": "^1.62.0"
   }
 }

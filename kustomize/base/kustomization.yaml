@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: twitter-scraper
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+
+# `labels` rather than the older `commonLabels`, and includeSelectors stays
+# false: commonLabels writes into spec.selector.matchLabels too, and a
+# Deployment's selector is immutable — changing this block later would then need
+# the Deployment deleted and recreated rather than applied.
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/name: twitter-scraper
+      app.kubernetes.io/part-of: home-infra

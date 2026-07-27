@@ -1,0 +1,24 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# The one environment this cluster has. The overlay exists rather than applying
+# `base` directly because it is the path Flux would be pointed at
+# (`path: ./kustomize/overlays/prod`, see home-infra docs/cluster-setup.html §4),
+# and because it is where the image tag belongs.
+images:
+  - name: ghcr.io/krammygod/twitter-scraper
+    # Bootstrap value. `.github/workflows/publish.yml` deploys by SHA tag, so a
+    # running cluster is normally ahead of this line — `kubectl -n
+    # twitter-scraper get deploy twitter-scraper -o jsonpath='{..image}'` is the
+    # source of truth for what is actually deployed.
+    newTag: latest
+
+# The Secret is deliberately absent. `twitter-scraper-auth` is produced in the
+# cluster by the sealed-secrets controller; sealing it needs the live cluster's
+# public key, so it cannot be checked in ahead of time. See README, "The auth
+# token" — once sealed, add the generated sealed-secret.yaml to `resources:`
+# above.

@@ -10,8 +10,20 @@ Scraper.start().then(() => {
     ready.emit('ready');
 });
 
-http.createServer((req, res) => {
-    const url = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
+const server = http.createServer((req, res) => {
+    const { pathname, searchParams } = new URL(req.url, `http://${req.headers.host}`);
+
+    // Backs startup/liveness/readiness probes, all three off this one path.
+    // 200 only once chromium is up AND still connected, so a browser that dies
+    // mid-life takes the pod down with it instead of leaving it Ready and
+    // returning empty results for every request.
+    if (pathname === '/healthz') {
+        const healthy = started && Scraper.isHealthy();
+        return res.writeHead(healthy ? 200 : 503, { 'Content-Type': 'text/plain' })
+            .end(healthy ? 'ok' : 'browser not ready');
+    }
+
+    const url = searchParams.get('url');
     if (!url) return res.writeHead(400).end('No data here yet...');
     console.log(`Received request for "${url}"`);
 
@@ -31,12 +43,22 @@ http.createServer((req, res) => {
             res.end(data);
         });
     });
-}).listen(PORT, () => {
+});
+
+server.listen(PORT, () => {
     console.log(`Scraper server listening on ${PORT}`);
 });
 
-// Ensure full cleanup on exit.
+// Ensure full cleanup on exit. Kubernetes sends SIGTERM and waits
+// terminationGracePeriodSeconds before SIGKILL; closing the browser here is what
+// keeps chromium from being orphaned when the pod is replaced.
+let shuttingDown = false;
 function cleanup() {
+    // SIGTERM followed by an impatient Ctrl-C would otherwise run this twice and
+    // close an already-closing context.
+    if (shuttingDown) return;
+    shuttingDown = true;
+    server.close();
     Scraper.end().then(() => {
         console.log('Finished cleaning up server.');
         process.exit(0);
@@ -44,7 +66,3 @@ function cleanup() {
 }
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
-// Sent by pm2
-process.on('message', message => {
-    if (message === 'shutdown') cleanup();
-});

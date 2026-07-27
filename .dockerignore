@@ -1,0 +1,8 @@
+.git
+.github
+.env
+node_modules
+kustomize
+ecosystem.config.js
+README.md
+LICENSE

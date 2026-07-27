@@ -1,0 +1,27 @@
+---
+# ClusterIP on purpose — there is no Ingress for this service and there should
+# not be one.
+#
+# The pod holds a logged-in twitter session cookie, and every request it serves
+# spends that session. Anything reachable from the internet that scrapes on
+# demand is a way to get the account rate-limited or locked at somebody else's
+# convenience. The only consumer is another workload in this cluster, which
+# reaches it at:
+#
+#   http://twitter-scraper.twitter-scraper.svc.cluster.local:5000/?url=...
+#
+# For a debug screenshot from a laptop, port-forward instead of exposing it:
+#   kubectl -n twitter-scraper port-forward svc/twitter-scraper 5000:5000
+apiVersion: v1
+kind: Service
+metadata:
+  name: twitter-scraper
+spec:
+  type: ClusterIP
+  selector:
+    app: twitter-scraper
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      protocol: TCP

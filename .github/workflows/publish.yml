@@ -1,36 +1,128 @@
-# This workflow deploys to production
-name: Deploy to production
+# Build the image and roll it out on the k3s cluster.
+#
+# Replaces the old `pm2 deploy` workflow. That one shipped source to a directory
+# on the box and let pm2 run `npm i` there, so a deploy could succeed on the
+# runner and still leave a half-installed app behind. Now the runner builds an
+# image, and the only thing that reaches the cluster is a tag that either exists
+# in the registry or does not.
+name: Build and deploy
 
 on:
   push:
     branches: ["main"]
-
+  # Build-only on PRs, so a broken Dockerfile is caught before it reaches main.
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
+env:
+  IMAGE: ghcr.io/krammygod/twitter-scraper
+
+# Never let two deploys race each other onto one Deployment. Deliberately not
+# cancel-in-progress: a half-finished rollout is worse than a queued one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
+  build:
+    # Native arm64. Every node in the cluster is an Orange Pi, and building
+    # linux/arm64 under QEMU on an x86 runner would emulate `playwright install`
+    # and the apt dependency step — tens of minutes for a result this runner
+    # produces natively. Free for public repositories.
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        # Skipped for pull_request, which gets a read-only token and does not push.
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          # Two tags for two jobs: the commit SHA is what actually gets deployed
+          # and what a rollback names; `latest` is the bootstrap value in the
+          # kustomize overlay and a convenience for `docker run`.
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          # Chromium and its apt dependencies are the bulk of the build and
+          # change only when playwright is bumped.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install pm2 to deploy
-        run: npm i -g pm2
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
 
-      - name: Install SSH Key
+      - name: Pin the overlay to this commit's image
+        # The overlay carries `newTag: latest` so a manual `kubectl apply -k`
+        # works from a clean checkout. Deploys pin the immutable SHA tag instead,
+        # so what is running is always traceable to a commit and a rollback is
+        # `kubectl rollout undo`.
+        #
+        # The grep is the point of this step: sed exits 0 when it matches
+        # nothing, so without it a rename of that line would silently ship
+        # `latest` forever and this workflow would keep reporting success.
+        run: |
+          set -euo pipefail
+          cd kustomize/overlays/prod
+          grep -q 'newTag: latest' kustomization.yaml
+          sed -i "s|newTag: latest|newTag: ${GITHUB_SHA}|" kustomization.yaml
+
+      - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-      
+
       - name: Hash known_hosts
         run: ssh-keygen -Hf ~/.ssh/known_hosts
 
-      # Omitting output for security reasons
-      - name: Deploy to production
+      - name: Apply manifests and wait for the rollout
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: pm2 deploy production > /dev/null
+        # Rendered here, applied there — opi never needs a checkout of this repo,
+        # which is what let DEPLOY_PATH go away.
+        #
+        # K3S_CONFIG_FILE=/dev/null: /usr/local/bin/kubectl is a symlink to the
+        # k3s multi-call binary, which parses /etc/rancher/k3s/config.yaml on
+        # every invocation regardless of subcommand. That file is 0600 root
+        # because it holds the join token, so as a normal user kubectl prints
+        # three permission-denied warnings before working correctly anyway.
+        # home-infra's kubeconfig playbook exports this in .bashrc, which a
+        # non-interactive ssh command never sources — hence setting it here too.
+        run: |
+          set -euo pipefail
+          kubectl kustomize kustomize/overlays/prod \
+            | ssh "$SSH_USER@$SSH_HOST" \
+                'K3S_CONFIG_FILE=/dev/null kubectl apply -f -'
+          ssh "$SSH_USER@$SSH_HOST" \
+            'K3S_CONFIG_FILE=/dev/null kubectl -n twitter-scraper rollout status deploy/twitter-scraper --timeout=5m'

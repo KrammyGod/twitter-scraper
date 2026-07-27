@@ -1,0 +1,153 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twitter-scraper
+spec:
+  replicas: 1
+
+  # Recreate, not the default RollingUpdate.
+  #
+  # RollingUpdate starts the replacement before the old pod is gone, so for a few
+  # seconds two chromium instances would be resident on the same node. On a 3.9
+  # GiB SBC that doubles the peak footprint of the heaviest thing in the pod, for
+  # a service whose only consumer retries anyway. A few seconds of downtime is
+  # the cheaper trade.
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: twitter-scraper
+  template:
+    metadata:
+      labels:
+        app: twitter-scraper
+    spec:
+      # opi (3.9 GiB, control plane) and omc (3.9 GiB) only. oopi is an Orange Pi
+      # 3 LTS with 1.9 GiB already carrying postgres, nginx and nfs-server —
+      # chromium peaking at ~700 MiB there is how postgres gets OOM-killed.
+      # Expressed as NotIn rather than an allow-list so that adding a fourth node
+      # later makes it eligible by default.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - oopi
+
+      # Nothing here talks to the Kubernetes API.
+      automountServiceAccountToken: false
+
+      # index.js closes the browser on SIGTERM. That is a chromium shutdown, not
+      # a scrape, so it finishes well inside the default 30s — stated explicitly
+      # because the number matters if the cleanup path ever grows.
+      terminationGracePeriodSeconds: 30
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000        # `node` in the base image
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: scraper
+          image: ghcr.io/krammygod/twitter-scraper:latest
+          # Overlays pin an immutable SHA tag, but a bare `latest` bootstrap
+          # deploy still needs to re-pull rather than trust the node's cache.
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+
+          env:
+            - name: PORT
+              value: "5000"
+            - name: TWITTER_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  # Not in this repo — see README, "The auth token". Created by
+                  # the sealed-secrets controller from a SealedSecret you seal
+                  # against the cluster, or by hand for a one-off.
+                  name: twitter-scraper-auth
+                  key: TWITTER_AUTH_TOKEN
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+          resources:
+            # requests = what the scheduler reserves; sized for an idle browser
+            # sitting between requests, which is the steady state almost all the
+            # time.
+            requests:
+              cpu: 100m
+              memory: 320Mi
+            limits:
+              # Rendering a tweet with several full-size photos peaks well above
+              # idle, and breaching a limit is an OOMKill rather than
+              # backpressure — 1Gi is headroom, not an allocation. Note that the
+              # memory-backed /dev/shm below counts against this same number.
+              memory: 1Gi
+              # No CPU limit: throttling only makes each scrape slower and every
+              # caller's 5s page-load timeout more likely to fire, whereas CPU
+              # contention resolves itself. Memory is the resource that needs a
+              # ceiling here, and it has one.
+
+          # All three probes share /healthz, which reports 200 only while
+          # browser.isConnected() holds.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            # 2 minutes. Chromium's first launch on an SBC is slow and varies
+            # with what else the node is doing; a tight budget here turns a slow
+            # boot into a crash loop.
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+
+          volumeMounts:
+            # Chromium's renderer/GPU processes exchange buffers through shared
+            # memory. The container runtime default is 64 MiB, which is where the
+            # famous "Target closed"/tab-crash reports come from — so give it a
+            # real one rather than passing --disable-dev-shm-usage and pushing
+            # the same traffic onto disk.
+            - name: dshm
+              mountPath: /dev/shm
+            # readOnlyRootFilesystem above means the only writable path is what
+            # we mount. Playwright puts each browser profile under os.tmpdir(),
+            # and HOME is set to /tmp in the Dockerfile for chromium's own state.
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            # Counts toward the container's memory limit, so it is deliberately
+            # smaller than the 1Gi above rather than sized independently.
+            sizeLimit: 128Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
