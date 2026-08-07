@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twitter-scraper
+  labels:
+    app: twitter-scraper
+spec:
+  template:
+    spec:
+      containers:
+        - name: twitter-scraper
+          env:
+            - name: TWITTER_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: twitter-scraper-secret
+                  key: TWITTER_AUTH_TOKEN

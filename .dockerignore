@@ -1,0 +1,9 @@
+node_modules
+.git
+.env*
+.github/
+kustomize/
+docs/
+CLAUDE.md
+LICENSE
+README.md

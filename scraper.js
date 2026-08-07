@@ -24,10 +24,19 @@ exports.start = async () => {
 };
 
 /**
+ * Whether chromium is still up. The health endpoint reports on this: a browser
+ * that died (OOM, a crash mid-scrape) leaves a server that keeps answering, with
+ * an empty list every time.
+ * @returns {boolean}
+ */
+exports.isConnected = () => browser?.isConnected() ?? false;
+
+/**
  * Must be called before closing server.
  * @returns {Promise<void>}
  */
 exports.end = () => {
+    if (!context) return Promise.resolve();
     return context.close().then(() => {
         browser.close();
     });
