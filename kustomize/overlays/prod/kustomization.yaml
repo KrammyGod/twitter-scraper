@@ -1,0 +1,13 @@
+namespace: twitter-scraper
+resources:
+  - ../../base/
+  - ./ingress.yaml
+  - ./sealed-secret.yaml
+
+patches:
+  - path: ./deployment.patch.yaml
+
+labels:
+  - pairs:
+      app: twitter-scraper
+    includeSelectors: true
