@@ -15,12 +15,20 @@ let context = undefined;
 exports.start = async () => {
     browser = await chromium.launch();
     context = await browser.newContext();
-    await context.addCookies([{
-        name: 'auth_token',
-        'value' : process.env.TWITTER_AUTH_TOKEN,
-        domain: '.twitter.com',
-        path: '/'
-    }]);
+    await context.addCookies([
+        {
+            name: 'auth_token',
+            'value' : process.env.TWITTER_AUTH_TOKEN,
+            domain: '.twitter.com',
+            path: '/'
+        },
+        {
+            name: 'auth_token',
+            'value' : process.env.TWITTER_AUTH_TOKEN,
+            domain: '.x.com',
+            path: '/'
+        },
+    ]);
 };
 
 /**
