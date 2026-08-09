@@ -88,9 +88,6 @@ empty list. Three probes hang off it:
   install runs for `--with-deps`, the apt packages chromium links against.
   Switching the dependency to `playwright-core` removes the download with no
   other visible change.
-- **`/dev/shm` is 64 MiB in a container** and chromium renders into it. The
-  Deployment mounts an emptyDir over it; without that a multi-image tweet takes
-  down the tab, which surfaces as an empty result, not an error.
 - **Playwright's `chromiumSandbox` defaults to `false`** (unlike Puppeteer). The
   pod is the isolation boundary. Enabling it needs capabilities the pod does not
   have.

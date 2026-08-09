@@ -13,7 +13,15 @@ let context = undefined;
  * @returns {Promise<void>}
  */
 exports.start = async () => {
-    browser = await chromium.launch();
+    browser = await chromium.launch({
+        args: [
+            '--disable-component-extensions-with-background-pages',
+            '--disable-default-apps',
+            '--disable-dev-shm-usage',
+            '--disable-input-event-activation-protection',
+            '--mute-audio',
+        ]
+    });
     context = await browser.newContext();
     await context.addCookies([
         {
@@ -29,6 +37,10 @@ exports.start = async () => {
             path: '/'
         },
     ]);
+    const page = await context.newPage();
+    await page.goto('https://x.com/home', { timeout: 10000 });
+    await page.close();
+    console.log('Scraper ready');
 };
 
 /**

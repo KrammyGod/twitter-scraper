@@ -33,15 +33,9 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 640Mi
             limits:
-              # 3x the 83 MiB the pm2 deployment holds at rest (node 46 MiB plus
-              # five chromium processes). Measured idle, never under a scrape —
-              # and /dev/shm below is tmpfs charged to this same limit.
-              memory: 256Mi
-          volumeMounts:
-            - name: dshm
-              mountPath: /dev/shm
+              memory: 1280Mi
           # Chromium is slow to launch on this hardware, and until it does
           # /healthz answers 503. Without this the liveness probe would kill the
           # pod mid-startup and crashloop it forever.
@@ -63,14 +57,3 @@ spec:
               port: rest
             periodSeconds: 30
             failureThreshold: 3
-      nodeSelector:
-        # Pinned to the node with memory headroom for a browser.
-        kubernetes.io/hostname: omc
-      volumes:
-        # Chromium's default /dev/shm in a container is 64 MiB, and it renders
-        # into shared memory — a multi-image tweet crashes the tab, which
-        # surfaces as an empty result rather than an error.
-        - name: dshm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 128Mi
