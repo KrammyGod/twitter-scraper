@@ -17,6 +17,10 @@ spec:
       labels:
         app: twitter-scraper
     spec:
+      # Keep on opi for memory constraints right now
+      nodeSelector:
+        kubernetes.io/hostname: opi
+
       securityContext:
         # The uid/gid the image's `node` user is created with.
         runAsUser: 2000
